@@ -1,0 +1,30 @@
+# ---------------------------------------------------------------------------
+# Engagement scope — the toolkit will ONLY act on targets listed here.
+# Copy this to ../scope.yaml and edit. Treat it as the written authorization
+# boundary for the engagement; keep it out of version control.
+# ---------------------------------------------------------------------------
+
+engagement: "Example Corp — external recon (DEMO)"
+authorized_by: "security-lead@example.com"   # who signed the authorization
+expires: "2026-12-31"                          # inclusive; tools refuse after this
+
+allow:
+  hosts:
+    - example.com
+    - "*.example.com"          # wildcard matches one label: app.example.com, api.example.com
+  cidrs:
+    - 93.184.216.0/24          # example.com's block (illustrative)
+
+# Optional. Deny always overrides allow — carve out things you must not touch.
+deny:
+  hosts:
+    - payments.example.com
+  cidrs: []
+
+# Optional. If present, port_scan refuses ports outside this list.
+# Leave empty or omit for "any port".
+ports:
+  - 80
+  - 443
+  - 8080
+  - 8443

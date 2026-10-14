@@ -1,0 +1,19 @@
+# Audit logs may contain target details from real engagements — never commit them.
+logs/*.jsonl
+logs/*.log
+
+# Your real scope file names targets you are authorized to test. Keep it private.
+scope.yaml
+scope.yml
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
