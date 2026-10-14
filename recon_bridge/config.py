@@ -31,6 +31,7 @@ def _load_dotenv() -> None:
 class Config:
     scope_path: Path
     audit_log_path: Path
+    engagement_path: Path
     rate_per_min: int
     dry_run: bool
 
@@ -41,6 +42,9 @@ class Config:
             scope_path=Path(os.environ.get("RECON_BRIDGE_SCOPE", "./scope.yaml")),
             audit_log_path=Path(
                 os.environ.get("RECON_BRIDGE_AUDIT_LOG", "./logs/audit.jsonl")
+            ),
+            engagement_path=Path(
+                os.environ.get("RECON_BRIDGE_ENGAGEMENT", "./engagement.json")
             ),
             rate_per_min=int(os.environ.get("RECON_BRIDGE_RATE_PER_MIN", "30")),
             dry_run=os.environ.get("RECON_BRIDGE_DRY_RUN", "0") == "1",

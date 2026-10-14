@@ -46,4 +46,5 @@ def dns_lookup(ctx: Context, host: str, record_types: list[str] | None = None) -
                 records.setdefault("_warnings", []).append(f"{rtype}: {exc}")
 
         record.complete({"record_types_found": [k for k in records if not k.startswith("_")]})
+        ctx.engagement.record_dns(host, ips, [k for k in records if not k.startswith("_")])
         return {"host": host, "resolved_ips": ips, "records": records}

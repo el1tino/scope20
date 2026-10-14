@@ -7,6 +7,11 @@ scope.yaml
 scope.yml
 .env
 
+# Engagement state and generated reports name real targets — keep them private.
+engagement.json
+engagement.json.tmp
+recon-report.md
+
 # Python
 __pycache__/
 *.py[cod]

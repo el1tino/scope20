@@ -12,6 +12,13 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from .dns_lookup import dns_lookup
+from .engagement_tools import (
+    engagement_status,
+    explain_scope,
+    export_report,
+    next_steps,
+    record_finding,
+)
 from .http_fingerprint import http_fingerprint
 from .port_scan import port_scan
 from .subdomain_enum import subdomain_enum
@@ -99,6 +106,71 @@ REGISTRY: list[ToolSpec] = [
                 "url": {"type": "string", "description": "URL or host; scheme optional."},
             },
             "required": ["url"],
+        },
+    ),
+    # --- Engagement controls (the PentestGPT-style task-tree operators) -------
+    # These read/advance the local engagement state; they perform no network I/O.
+    ToolSpec(
+        name="explain_scope",
+        description=(
+            "Explain exactly what this engagement authorizes: allowed hosts and "
+            "CIDRs, the port allowlist, and the expiry. Performs no network action."
+        ),
+        fn=explain_scope,
+        parameters={"type": "object", "properties": {}},
+    ),
+    ToolSpec(
+        name="engagement_status",
+        description=(
+            "Show the engagement task tree: discovered assets, findings by "
+            "severity, completed steps, and the pending to-do list."
+        ),
+        fn=engagement_status,
+        parameters={"type": "object", "properties": {}},
+    ),
+    ToolSpec(
+        name="next_steps",
+        description=(
+            "Suggest the next in-scope reconnaissance actions, derived from the "
+            "current findings and filtered through scope. Records each as a "
+            "pending task."
+        ),
+        fn=next_steps,
+        parameters={"type": "object", "properties": {}},
+    ),
+    ToolSpec(
+        name="record_finding",
+        description=(
+            "Record a manual observation (an operator note) in the engagement "
+            "tree. Local annotation only; performs no network action."
+        ),
+        fn=record_finding,
+        parameters={
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Host or asset the note is about."},
+                "title": {"type": "string", "description": "Short description of the observation."},
+                "severity": {
+                    "type": "string",
+                    "description": "info | low | medium | high.",
+                },
+                "detail": {"type": "string", "description": "Optional longer note."},
+            },
+            "required": ["target", "title"],
+        },
+    ),
+    ToolSpec(
+        name="export_report",
+        description=(
+            "Render the engagement task tree as a Markdown recon report and write "
+            "it to disk (default ./recon-report.md)."
+        ),
+        fn=export_report,
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Optional output path for the report."},
+            },
         },
     ),
 ]

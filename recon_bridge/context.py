@@ -13,6 +13,7 @@ from typing import Any, Iterator
 
 from .audit import AuditLog
 from .config import Config
+from .engagement import Engagement
 from .ratelimit import RateLimiter, RateLimitError
 from .scope import Scope, ScopeError
 
@@ -22,11 +23,20 @@ class ToolRefused(Exception):
 
 
 class Context:
-    def __init__(self, config: Config, scope: Scope, audit: AuditLog, limiter: RateLimiter):
+    def __init__(
+        self,
+        config: Config,
+        scope: Scope,
+        audit: AuditLog,
+        limiter: RateLimiter,
+        engagement: Engagement,
+    ):
         self.config = config
         self.scope = scope
         self.audit = audit
         self.limiter = limiter
+        # The engagement task tree (PTT): recon tools feed it, operator tools read it.
+        self.engagement = engagement
 
     @classmethod
     def bootstrap(cls) -> "Context":
@@ -34,7 +44,8 @@ class Context:
         scope = Scope.load(config.scope_path)
         audit = AuditLog(config.audit_log_path)
         limiter = RateLimiter(config.rate_per_min)
-        return cls(config, scope, audit, limiter)
+        engagement = Engagement.load(config.engagement_path)
+        return cls(config, scope, audit, limiter, engagement)
 
     @contextmanager
     def guard(

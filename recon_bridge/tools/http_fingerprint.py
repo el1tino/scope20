@@ -54,6 +54,7 @@ def http_fingerprint(ctx: Context, url: str) -> dict[str, Any]:
             )
         except Exception as exc:  # noqa: BLE001
             record.complete({"reachable": False})
+            ctx.engagement.record_http(host, {"reachable": False})
             return {"url": target_url, "reachable": False, "error": str(exc)[:200]}
 
         headers = {k.lower(): v for k, v in resp.headers.items()}
@@ -75,6 +76,7 @@ def http_fingerprint(ctx: Context, url: str) -> dict[str, Any]:
         record.complete(
             {"status": resp.status_code, "missing_security_headers": len(missing_sec)}
         )
+        ctx.engagement.record_http(host, result)
         return result
 
 

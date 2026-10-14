@@ -98,12 +98,58 @@ async def http_fingerprint(url: str) -> str:
     return await _run_tool("http_fingerprint", url=url)
 
 
+# --- Engagement controls (task-tree operators; no network I/O) ----------------
+
+async def explain_scope() -> str:
+    """Explain what this engagement authorizes: allowed hosts/CIDRs, the port
+    allowlist, and the expiry. Performs no network action."""
+    return await _run_tool("explain_scope")
+
+
+async def engagement_status() -> str:
+    """Show the engagement task tree: discovered assets, findings by severity,
+    completed steps, and the pending to-do list."""
+    return await _run_tool("engagement_status")
+
+
+async def next_steps() -> str:
+    """Suggest the next in-scope recon actions from current findings, filtered
+    through scope. Records each as a pending task."""
+    return await _run_tool("next_steps")
+
+
+async def record_finding(
+    target: str, title: str, severity: str = "info", detail: str = ""
+) -> str:
+    """Record a manual observation in the engagement tree. Local annotation only.
+
+    target: host or asset the note is about.
+    title: short description.
+    severity: info | low | medium | high.
+    detail: optional longer note.
+    """
+    return await _run_tool(
+        "record_finding", target=target, title=title, severity=severity, detail=detail
+    )
+
+
+async def export_report(path: str | None = None) -> str:
+    """Render the engagement task tree as a Markdown recon report on disk
+    (default ./recon-report.md)."""
+    return await _run_tool("export_report", path=path)
+
+
 def build_server() -> MCPServer:
-    server = MCPServer("recon-bridge", instructions=INSTRUCTIONS, version="0.1.0")
+    server = MCPServer("recon-bridge", instructions=INSTRUCTIONS, version="0.2.0")
     server.add_tool(dns_lookup)
     server.add_tool(subdomain_enum)
     server.add_tool(port_scan)
     server.add_tool(http_fingerprint)
+    server.add_tool(explain_scope)
+    server.add_tool(engagement_status)
+    server.add_tool(next_steps)
+    server.add_tool(record_finding)
+    server.add_tool(export_report)
     return server
 
 

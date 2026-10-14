@@ -61,6 +61,7 @@ def port_scan(
 
         record.complete({"engine": engine, "open_ports": len(result.get("open_ports", []))})
         result["engine"] = engine
+        ctx.engagement.record_ports(target, result.get("open_ports", []))
         return result
 
 

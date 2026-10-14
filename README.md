@@ -18,7 +18,7 @@ append-only audit trail of everything it does — including every refusal.
 
 ## Why this design
 
-Two ideas do most of the work:
+Three ideas do most of the work:
 
 1. **One registry, many front-ends.** Every capability is a plain function
    listed once in `recon_bridge/tools/__init__.py`. The MCP server and the
@@ -31,9 +31,20 @@ Two ideas do most of the work:
    leaves the host. Get the boundary right once, and every present and future
    tool inherits it.
 
+3. **A single engagement task tree carries state across phases.** Every recon
+   tool feeds one resumable structure — assets, findings, a phased to-do — so
+   each phase's results seed the next, and any model (or you) can inspect it,
+   ask what to do next, and export a report. This is lifted from
+   [PentestGPT](https://github.com/GreyDGL/PentestGPT)'s *Pentesting Task Tree*,
+   but kept deterministic and model-agnostic: the state layer needs no LLM, and
+   suggestions are always filtered back through scope (see
+   [Credits](#credits)).
+
 ---
 
-## What it can do (v1)
+## What it can do
+
+**Recon tools** — each one acts on the network, always inside scope:
 
 | Tool | What it does | Impact |
 |------|--------------|--------|
@@ -41,6 +52,18 @@ Two ideas do most of the work:
 | `subdomain_enum` | Discover subdomains from Certificate Transparency logs (crt.sh); returns only in-scope names | Passive |
 | `port_scan` | TCP port/service scan — `nmap -sV` when installed, else a built-in Python TCP-connect scan | Active |
 | `http_fingerprint` | One GET to an in-scope URL: status, server banner, title, security-header posture, redirects | Low |
+
+**Engagement controls** — the task-tree operators (inspired by PentestGPT's
+`todo` / `next` / `discuss`); these read and advance local state only and touch
+no network:
+
+| Tool | What it does |
+|------|--------------|
+| `explain_scope` | Report exactly what the engagement authorizes (`discuss`) |
+| `engagement_status` | Show discovered assets, findings by severity, and the pending to-do (`todo`) |
+| `next_steps` | Suggest the next **in-scope** recon actions from current findings (`next`) |
+| `record_finding` | Jot a manual observation into the tree |
+| `export_report` | Render the tree as a Markdown recon report |
 
 `nmap` is optional: if it is not installed, `port_scan` falls back to a pure-Python
 connect scan of a common-ports list, so the toolkit runs anywhere. Install `nmap`
@@ -139,6 +162,44 @@ tools with identical guardrails.
 
 ---
 
+## The engagement task tree
+
+Recon is rarely one call. `subdomain_enum` finds names you then want to scan;
+`port_scan` finds a web port you then want to fingerprint. recon-bridge threads
+those phases together through one **engagement task tree**, persisted to
+`engagement.json` (configurable via `RECON_BRIDGE_ENGAGEMENT`) so a long
+engagement survives a restart.
+
+Every recon tool feeds it automatically. The engagement controls read it:
+
+```text
+explain_scope        →  what am I allowed to touch?
+engagement_status    →  assets discovered, findings by severity, pending to-do
+next_steps           →  the next in-scope actions, derived from what's known
+export_report        →  a Markdown recon report of the whole tree
+```
+
+`next_steps` is deterministic — it reads the current findings and proposes the
+obvious follow-ups (resolve an asset that has no DNS yet, scan one with no port
+data, fingerprint a host with a web port open) — and **every suggestion is run
+back through the same `Scope`**, so the tree can only ever point at authorized
+targets. A typical loop, whether driven by a model or by hand:
+
+```text
+subdomain_enum acme.example  →  next_steps  →  port_scan app.acme.example
+                             →  next_steps  →  http_fingerprint https://app.acme.example
+                             →  export_report
+```
+
+Because the state layer needs no LLM, the suggestions are reproducible and the
+report is the same whether Claude, ChatGPT, or a shell script drove the session.
+
+`engagement.json` and generated reports can name real targets, so (like
+`scope.yaml` and `logs/`) the included `.gitignore` keeps them out of version
+control.
+
+---
+
 ## The audit trail
 
 Every invocation appends one JSON line to `logs/audit.jsonl` (configurable):
@@ -172,18 +233,34 @@ pip install pytest
 pytest -q
 ```
 
-The suite focuses on the authorization boundary: wildcard matching, deny-over-
-allow precedence, protected-range refusal, port allowlists, engagement expiry,
-and refusing a host that resolves into private space.
+The suite covers two layers. The authorization boundary: wildcard matching,
+deny-over-allow precedence, protected-range refusal, port allowlists, engagement
+expiry, and refusing a host that resolves into private space. And the engagement
+task tree: finding de-duplication, persistence round-trips, scope-filtered
+suggestions (including skipping an asset that has fallen out of scope), and
+report rendering.
 
 ---
 
 ## Roadmap ideas
 
-- TLS/certificate inspection tool
-- Structured findings export (JSON → Markdown report)
-- Per-engagement audit log paths and a report generator that reads the trail
-- An "explain scope" tool so the model can tell the operator what it may touch
+- TLS/certificate inspection tool, feeding findings into the same tree
+- Per-engagement audit log paths keyed off the scope file
+- A `prioritize` control that ranks the to-do by likely exposure
+- Richer report formats (HTML, or a findings export for a reporting pipeline)
+
+---
+
+## Credits
+
+The engagement task tree is inspired by
+[PentestGPT](https://github.com/GreyDGL/PentestGPT) (Gelei Deng et al., USENIX
+Security 2024) and its **Pentesting Task Tree** — a single structure that
+carries engagement state so each phase seeds the next. recon-bridge borrows the
+idea but not the implementation: the state layer here is deterministic and
+model-agnostic, every suggestion is filtered through the engagement scope, and
+the toolkit stays firmly in passive/low-impact reconnaissance. Like PentestGPT,
+it is for **authorized and educational use only**.
 
 ---
 

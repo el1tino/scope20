@@ -43,6 +43,7 @@ def subdomain_enum(ctx: Context, domain: str) -> dict[str, Any]:
         record.complete(
             {"found_total": len(names), "in_scope": len(in_scope), "dropped_out_of_scope": out_of_scope}
         )
+        ctx.engagement.record_subdomains(domain, in_scope)
         return {
             "domain": domain,
             "source": "crt.sh (Certificate Transparency)",
